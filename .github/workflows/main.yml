@@ -63,6 +63,7 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          import re
           from pathlib import Path
 
           path = (
@@ -74,18 +75,33 @@ jobs:
 
           text = path.read_text(encoding="utf-8")
 
-          old = """            40,
-            height - pieHeight - 70,"""
+          pattern = re.compile(
+              r"(pie\.createPieLanguage\(\s*"
+              r"svg,\s*"
+              r"userInfo,\s*)"
+              r"40,"
+              r"(\s*height\s*-\s*pieHeight\s*-\s*70,)",
+              re.MULTILINE,
+          )
 
-          new = """            width - pieWidth,
-            height - pieHeight - 70,"""
+          updated, count = pattern.subn(
+              r"\1width - pieWidth,\2",
+              text,
+              count=1,
+          )
 
-          if old not in text:
-              raise RuntimeError("원형 그래프 위치 코드를 찾지 못했습니다.")
+          if count != 1:
+              print("원형 그래프 위치 변경 대상 개수:", count)
 
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+              index = text.find("pie.createPieLanguage")
+              if index != -1:
+                  print(text[index:index + 500])
 
-          print("원형 언어 그래프를 오른쪽 아래로 이동했습니다.")
+              raise RuntimeError("원형 그래프 위치 변경 실패")
+
+          path.write_text(updated, encoding="utf-8")
+
+          print("원형 언어 그래프 X좌표를 오른쪽으로 이동했습니다.")
           PY
 
       - name: Build generator
