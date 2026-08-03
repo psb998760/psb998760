@@ -16,6 +16,27 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Check contribution data
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          gh api graphql -f query='
+          query {
+            viewer {
+              login
+            }
+            user(login: "psb998760") {
+              contributionsCollection {
+                hasAnyRestrictedContributions
+                restrictedContributionsCount
+                totalCommitContributions
+                contributionCalendar {
+                  totalContributions
+                }
+              }
+            }
+          }' --jq '.data'
+
       - uses: yoshi389111/github-profile-3d-contrib@latest
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
