@@ -28,18 +28,35 @@ jobs:
           import os
           from pathlib import Path
 
-          path = Path(os.environ["RUNNER_TEMP"]) / "profile-3d-generator/src/github-graphql.ts"
+          path = (
+              Path(os.environ["RUNNER_TEMP"])
+              / "profile-3d-generator"
+              / "src"
+              / "github-graphql.ts"
+          )
+
           text = path.read_text(encoding="utf-8")
 
-          old = '''    const yearArgs = year
-              ? `(from:"${year}-01-01T00:00:00.000Z", to:"${year}-12-31T23:59:59.000Z")`
-              : '';'''
+          start_marker = "    const yearArgs = year"
+          end_marker = "    const headers = {"
 
-          new = '''    const yearArgs =
-              `(from:"2026-02-01T00:00:00.000Z", to:"${new Date().toISOString()}")`;'''
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
 
-          assert old in text, "날짜 설정 코드를 찾지 못했습니다. 생성기 구조가 변경되었을 수 있습니다."
-          path.write_text(text.replace(old, new), encoding="utf-8")
+          if start == -1 or end == -1:
+              print("github-graphql.ts에서 날짜 코드 위치를 찾지 못했습니다.")
+              print("const yearArgs 위치:", text.find("const yearArgs"))
+              raise RuntimeError("날짜 설정 코드 치환 실패")
+
+          replacement = '''    const yearArgs =
+              `(from:"2026-02-01T00:00:00.000Z", to:"${new Date().toISOString()}")`;
+
+          '''
+
+          updated = text[:start] + replacement + text[end:]
+          path.write_text(updated, encoding="utf-8")
+
+          print("기여도 조회 기간을 2026-02-01부터 현재 날짜까지로 변경했습니다.")
           PY
 
       - name: Build generator
