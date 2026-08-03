@@ -71,7 +71,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           USERNAME: ${{ github.repository_owner }}
         run: |
-          node "$RUNNER_TEMP/profile-3d-generator"
+          node "$RUNNER_TEMP/profile-3d-generator/dist0/src/index.js"
 
       - name: Commit & Push
         run: |
