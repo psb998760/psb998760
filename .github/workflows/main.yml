@@ -58,6 +58,35 @@ jobs:
 
           print("기여도 조회 기간을 2026-02-01부터 현재 날짜까지로 변경했습니다.")
           PY
+          
+      - name: Move language chart to the right
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = (
+              Path(os.environ["RUNNER_TEMP"])
+              / "profile-3d-generator"
+              / "src"
+              / "create-svg.ts"
+          )
+
+          text = path.read_text(encoding="utf-8")
+
+          old = """            40,
+            height - pieHeight - 70,"""
+
+          new = """            width - pieWidth,
+            height - pieHeight - 70,"""
+
+          if old not in text:
+              raise RuntimeError("원형 그래프 위치 코드를 찾지 못했습니다.")
+
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          print("원형 언어 그래프를 오른쪽 아래로 이동했습니다.")
+          PY
 
       - name: Build generator
         working-directory: ${{ runner.temp }}/profile-3d-generator
