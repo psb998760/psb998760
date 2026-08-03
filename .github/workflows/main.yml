@@ -16,38 +16,54 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Check contribution data
-        env:
-          GH_TOKEN: ${{ secrets.TOKEN }}
+      - name: Download generator
         run: |
-          gh api graphql -f query='
-          query {
-            viewer {
-              login
-            }
-            user(login: "psb998760") {
-              contributionsCollection {
-                hasAnyRestrictedContributions
-                restrictedContributionsCount
-                totalCommitContributions
-                contributionCalendar {
-                  totalContributions
-                }
-              }
-            }
-          }' --jq '.data'
+          git clone --depth 1 \
+            https://github.com/yoshi389111/github-profile-3d-contrib.git \
+            "$RUNNER_TEMP/profile-3d-generator"
 
-      - uses: yoshi389111/github-profile-3d-contrib@latest
+      - name: Set period from February 2026
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "profile-3d-generator/src/github-graphql.ts"
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    const yearArgs = year
+              ? `(from:"${year}-01-01T00:00:00.000Z", to:"${year}-12-31T23:59:59.000Z")`
+              : '';'''
+
+          new = '''    const yearArgs =
+              `(from:"2026-02-01T00:00:00.000Z", to:"${new Date().toISOString()}")`;'''
+
+          assert old in text, "날짜 설정 코드를 찾지 못했습니다. 생성기 구조가 변경되었을 수 있습니다."
+          path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+
+      - name: Build generator
+        working-directory: ${{ runner.temp }}/profile-3d-generator
+        run: |
+          npm ci
+          npm run build
+
+      - name: Generate profile image
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           USERNAME: ${{ github.repository_owner }}
+        run: |
+          node "$RUNNER_TEMP/profile-3d-generator"
 
       - name: Commit & Push
         run: |
-          git config user.name psb998760
-          git config user.email psb998760@github.com
-          git add -A .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add profile-3d-contrib
 
-          if git commit -m "generated"; then
+          if git diff --cached --quiet; then
+            echo "변경된 이미지가 없습니다."
+          else
+            git commit -m "generated"
             git push
           fi
